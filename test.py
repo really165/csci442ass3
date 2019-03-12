@@ -21,7 +21,7 @@ headTilt = 6000
 motors = 6000
 turn = 6000
 
-changeValue = 600
+changeValue = 1000
 waitValue = 1
 
 def forward(waitValue):
@@ -46,22 +46,22 @@ def backward(waitValue):
     print('stop ' + str(motors))
     time.sleep(waitValue)
 
-def turnLeft(waitValue):
+def turnRight(waitValue):
     global turn
     turn -= changeValue
     #tango.setTarget(TURN, turn)
-    print('turn left: turn = ' + str(turn))
+    print('turn right: turn = ' + str(turn))
     time.sleep(waitValue)
     turn += changeValue
     #tango.setTarget(TURN, turn)
     print('stop ' + str(turn))
     time.sleep(waitValue)
 
-def turnRight(waitValue):
+def turnLeft(waitValue):
     global turn
     turn += changeValue
     #tango.setTarget(TURN, turn)
-    print('turn right: turn = ' + str(turn))
+    print('turn left: turn = ' + str(turn))
     time.sleep(waitValue)
     turn -= changeValue
     #tango.setTarget(TURN, turn)
