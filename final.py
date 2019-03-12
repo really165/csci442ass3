@@ -65,7 +65,22 @@ def turnRight():
     print('stop ' + str(turn))
     time.sleep(waitValue)
 
-img = cv.imread("turnRight.jpg", cv.IMREAD_COLOR)
+def calculateTurnValue(center, xPos):
+    distanceFromCenter = 0
+    if(center > xPos):
+        distanceFromCenter = center - xPos
+    elif(xPos > center):
+        distanceFromCenter = xPos - center
+    else:
+        distanceFromCenter = 0
+    normalized = distanceFromCenter/center
+    return normalized
+
+def calculateForwardValue(height, yPos):
+    normalized = 1-(yPos/height)
+    return normalized
+
+img = cv.imread("testimage2.jpg", cv.IMREAD_COLOR)
 
 #step one: edges
 gray = cv.cvtColor(img, cv.COLOR_RGB2GRAY)
@@ -108,15 +123,37 @@ if(numberOfContours > 0):
     if((middleOfScreen-turnTolerance)<xAverage<(middleOfScreen+turnTolerance)):
         #go straight
         print("go straight")
+        forwardValue = calculateForwardValue(height,yAverage)
+        print(forwardValue)
+        time.sleep(forwardValue)
+        print("we're good")
         #forward()
     else:
         #find out if we need to turn left or right
         if(xAverage < middleOfScreen):
             print("turn left")
+            turnValue = calculateTurnValue((width/2),xAverage)
+            print(turnValue)
+            time.sleep(turnValue)
+
+            print("go straight")
+            forwardValue = calculateForwardValue(height,yAverage)
+            print(forwardValue)
+            time.sleep(forwardValue)
+            print("we're good")
             #turnLeft()
             #forward()
         elif(xAverage > middleOfScreen):
             print("turn right")
+            turnValue = calculateTurnValue((width/2),xAverage)
+            print(turnValue)
+            time.sleep(turnValue)
+
+            print("go straight")
+            forwardValue = calculateForwardValue(height,yAverage)
+            print(forwardValue)
+            time.sleep(forwardValue)
+            print("we're good")
             #turnRight()
             #forward()
         else:
