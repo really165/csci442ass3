@@ -1,22 +1,12 @@
 import cv2 as cv
 import numpy as np
 
-#import tkinter as tk
-#import maestro
+import tkinter as tk
+import maestro
 import time
 
-# import the necessary packages
 from picamera.array import PiRGBArray
 from picamera import PiCamera
-
-# initialize the camera and grab a reference to the raw camera capture
-camera = PiCamera()
-camera.resolution = (640, 480)
-camera.framerate = 32
-rawCapture = PiRGBArray(camera, size=(640, 480))
-
-# allow the camera to warmup
-time.sleep(0.1)
 
 MOTORS = 1
 TURN = 2
@@ -78,20 +68,34 @@ def turnRight():
     print('stop ' + str(turn))
     time.sleep(waitValue)
 
-#img = cv.imread("turnRight.jpg", cv.IMREAD_COLOR)
+# initialize the camera and grab a reference to the raw camera capture
+camera = PiCamera()
+camera.resolution = (640, 480)
+camera.framerate = 32
+rawCapture = PiRGBArray(camera, size=(640, 480))
+
+# allow the camera to warmup
+time.sleep(0.1)
+
+hasFailed = False
+
+# capture frames from the camera
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     # grab the raw NumPy array representing the image, then initialize the timestamp
     # and occupied/unoccupied text
     img = frame.array
+
+    #img = cv.imread("turnRight.jpg", cv.IMREAD_COLOR)
+
     #step one: edges
     gray = cv.cvtColor(img, cv.COLOR_RGB2GRAY)
 
     #step two: threshold
-    ret,threshold = cv.threshold(gray,150,255,cv.THRESH_BINARY)
-    contours, hierarchy = cv.findContours(threshold,cv.RETR_TREE,cv.CHAIN_APPROX_SIMPLE)
+    ret,threshold = cv.threshold(gray,190,255,cv.THRESH_BINARY)
+    img2, contours, hierarchy = cv.findContours(threshold,cv.RETR_TREE,cv.CHAIN_APPROX_SIMPLE)
 
     numberOfContours = 0
-    areaTolerance = 200 
+    areaTolerance = 100
     xTotal = 0
     yTotal = 0
     for contour in contours:
@@ -125,23 +129,38 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             #go straight
             print("go straight")
             #forward()
+            hasFailed = False
         else:
             #find out if we need to turn left or right
             if(xAverage < middleOfScreen):
                 print("turn left")
                 #turnLeft()
                 #forward()
+                hasFailed = False
             elif(xAverage > middleOfScreen):
                 print("turn right")
                 #turnRight()
                 #forward()
+                hasFailed = False
             else:
                 print("error")
     else:
-        print("stop")
-        break
+        if(hasFailed):
+            print("stop")
+            break
+        else:
+            turnRight()
+            turnLeft()
+            hasFailed = True
 
     cv.imshow("Foreground", img)
 
-    cv.waitKey(0)
-    cv.destroyAllWindows()
+    key = cv.waitKey(1) & 0xFF
+    
+    # clear the stream in preparation for the next frame
+    rawCapture.truncate(0)
+
+    if key == ord("q"):
+        break
+
+cv.destroyAllWindows()
