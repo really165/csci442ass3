@@ -14,7 +14,7 @@ BODY = 0
 HEADTILT = 4
 HEADTURN = 3
 
-#tango = maestro.Controller()
+tango = maestro.Controller()
 body = 6000
 headTurn = 6000
 headTilt = 6000
@@ -26,45 +26,45 @@ waitValue = 1
 
 def forward(waitValue):
     global motors
-    motors += changeValue
-    #tango.setTarget(MOTORS, motors)
+    motors -= changeValue
+    tango.setTarget(MOTORS, motors)
     print('move forward: motors = ' + str(motors))
     time.sleep(waitValue)
-    motors -= changeValue
-    #tango.setTarget(MOTORS, motors)
+    motors += changeValue
+    tango.setTarget(MOTORS, motors)
     print('stop ' + str(motors))
     time.sleep(waitValue)
 
 def backward(waitValue):
     global motors
     motors -= changeValue
-    #tango.setTarget(MOTORS, motors)
+    tango.setTarget(MOTORS, motors)
     print('move backward: motors = ' + str(motors))
     time.sleep(waitValue)
     motors += changeValue
-    #tango.setTarget(MOTORS, motors)
+    tango.setTarget(MOTORS, motors)
     print('stop ' + str(motors))
     time.sleep(waitValue)
 
 def turnRight(waitValue):
     global turn
     turn -= changeValue
-    #tango.setTarget(TURN, turn)
+    tango.setTarget(TURN, turn)
     print('turn right: turn = ' + str(turn))
     time.sleep(waitValue)
     turn += changeValue
-    #tango.setTarget(TURN, turn)
+    tango.setTarget(TURN, turn)
     print('stop ' + str(turn))
     time.sleep(waitValue)
 
 def turnLeft(waitValue):
     global turn
     turn += changeValue
-    #tango.setTarget(TURN, turn)
+    tango.setTarget(TURN, turn)
     print('turn left: turn = ' + str(turn))
     time.sleep(waitValue)
     turn -= changeValue
-    #tango.setTarget(TURN, turn)
+    tango.setTarget(TURN, turn)
     print('stop ' + str(turn))
     time.sleep(waitValue)
 
@@ -106,11 +106,11 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     gray = cv.cvtColor(img, cv.COLOR_RGB2GRAY)
 
     #step two: threshold
-    ret,threshold = cv.threshold(gray,190,255,cv.THRESH_BINARY)
-    img2, contours, hierarchy = cv.findContours(threshold,cv.RETR_TREE,cv.CHAIN_APPROX_SIMPLE)
+    ret,threshold = cv.threshold(gray,230,255,cv.THRESH_BINARY)
+    contours, hierarchy = cv.findContours(threshold,cv.RETR_TREE,cv.CHAIN_APPROX_SIMPLE)
 
     numberOfContours = 0
-    areaTolerance = 100
+    areaTolerance = 200
     xTotal = 0
     yTotal = 0
     for contour in contours:
