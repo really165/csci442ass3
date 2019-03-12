@@ -24,7 +24,7 @@ turn = 6000
 changeValue = 600
 waitValue = 1
 
-def forward():
+def forward(waitValue):
     global motors
     motors += changeValue
     #tango.setTarget(MOTORS, motors)
@@ -35,7 +35,7 @@ def forward():
     print('stop ' + str(motors))
     time.sleep(waitValue)
 
-def backward():
+def backward(waitValue):
     global motors
     motors -= changeValue
     #tango.setTarget(MOTORS, motors)
@@ -46,7 +46,7 @@ def backward():
     print('stop ' + str(motors))
     time.sleep(waitValue)
 
-def turnLeft():
+def turnLeft(waitValue):
     global turn
     turn -= changeValue
     #tango.setTarget(TURN, turn)
@@ -57,7 +57,7 @@ def turnLeft():
     print('stop ' + str(turn))
     time.sleep(waitValue)
 
-def turnRight():
+def turnRight(waitValue):
     global turn
     turn += changeValue
     #tango.setTarget(TURN, turn)
@@ -67,6 +67,21 @@ def turnRight():
     #tango.setTarget(TURN, turn)
     print('stop ' + str(turn))
     time.sleep(waitValue)
+
+def calculateTurnValue(center, xPos):
+    distanceFromCenter = 0
+    if(center > xPos):
+        distanceFromCenter = center - xPos
+    elif(xPos > center):
+        distanceFromCenter = xPos - center
+    else:
+        distanceFromCenter = 0
+    normalized = distanceFromCenter/center
+    return normalized
+
+def calculateForwardValue(height, yPos):
+    normalized = 1-(yPos/height)
+    return normalized
 
 # initialize the camera and grab a reference to the raw camera capture
 camera = PiCamera()
@@ -114,6 +129,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             cv.circle(img, (cX, cY), 7, (0, 0, 0), -1)
             cv.putText(img, "center", (cX - 20, cY - 20),
                 cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+
     #if a contour was found
     if(numberOfContours > 0):
         xAverage = int(xTotal/numberOfContours)
@@ -128,29 +144,35 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         if((middleOfScreen-turnTolerance)<xAverage<(middleOfScreen+turnTolerance)):
             #go straight
             print("go straight")
-            #forward()
+            forwardValue = calculateForwardValue(height,yAverage)
+            forward(forwardValue)
             hasFailed = False
         else:
             #find out if we need to turn left or right
             if(xAverage < middleOfScreen):
                 print("turn left")
-                #turnLeft()
-                #forward()
+                turnValue = calculateTurnValue((width/2),xAverage)
+                turnLeft(turnValue)
+
+                forwardValue = calculateForwardValue(height,yAverage)
+                forward(forwardValue)
                 hasFailed = False
             elif(xAverage > middleOfScreen):
                 print("turn right")
-                #turnRight()
-                #forward()
+                turnValue = calculateTurnValue((width/2),xAverage)
+                turnRight(turnValue)
+
+                forwardValue = calculateForwardValue(height,yAverage)
+                forward(forwardValue)
                 hasFailed = False
             else:
                 print("error")
     else:
         if(hasFailed):
-            print("stop")
-            break
+            print("stopped")
         else:
-            turnRight()
-            turnLeft()
+            turnRight(0.5)
+            turnLeft(0.5)
             hasFailed = True
 
     cv.imshow("Foreground", img)
