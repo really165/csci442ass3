@@ -85,9 +85,13 @@ def calculateForwardValue(height, yPos):
 
 # initialize the camera and grab a reference to the raw camera capture
 camera = PiCamera()
-camera.resolution = (640, 480)
+width = 640
+height = 480
+camera.resolution = (width, height)
 camera.framerate = 32
-rawCapture = PiRGBArray(camera, size=(640, 480))
+rawCapture = PiRGBArray(camera, size=(width, height))
+
+sightTolerance = height - 100
 
 # allow the camera to warmup
 time.sleep(0.1)
@@ -116,19 +120,21 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     for contour in contours:
         #if the contour is big enough
         if(cv.contourArea(contour)>areaTolerance):
-            numberOfContours += 1
             # compute the center of the contour
             M = cv.moments(contour)
             cX = int(M["m10"] / M["m00"])
-            xTotal += cX
             cY = int(M["m01"] / M["m00"])
-            yTotal += cY
-        
-            # draw the contour and center of the shape on the image
-            cv.drawContours(img, [contour], -1, (0, 255, 0), 2)
-            cv.circle(img, (cX, cY), 7, (0, 0, 0), -1)
-            cv.putText(img, "center", (cX - 20, cY - 20),
-                cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+
+            if(cY > sightTolerance):
+                xTotal += cX
+                yTotal += cY
+                numberOfContours += 1
+            
+                # draw the contour and center of the shape on the image
+                cv.drawContours(img, [contour], -1, (0, 255, 0), 2)
+                cv.circle(img, (cX, cY), 7, (0, 0, 0), -1)
+                cv.putText(img, "center", (cX - 20, cY - 20),
+                    cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
 
     #if a contour was found
     if(numberOfContours > 0):
@@ -138,6 +144,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 
         height, width, channels = img.shape
         middleOfScreen = width/2
+        middleHeight = height/2
         turnTolerance = 50
         #determine if we need to turn
         #if the average is in the middle somewhat
@@ -146,6 +153,9 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             print("go straight")
             forwardValue = calculateForwardValue(height,yAverage)
             forward(forwardValue)
+
+            #restore defaults
+            sightTolerance = height - 20
             hasFailed = False
         else:
             #find out if we need to turn left or right
@@ -156,6 +166,9 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 
                 forwardValue = calculateForwardValue(height,yAverage)
                 forward(forwardValue)
+
+                #restore defaults
+                sightTolerance = height - 20
                 hasFailed = False
             elif(xAverage > middleOfScreen):
                 print("turn right")
@@ -164,18 +177,24 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 
                 forwardValue = calculateForwardValue(height,yAverage)
                 forward(forwardValue)
+
+                #restore defaults
+                sightTolerance = height - 20
                 hasFailed = False
             else:
                 print("error")
     else:
         if(hasFailed):
-            print("stopped")
+            print("searching")
+            #restore defaults
+            sightTolerance -= 20
+            if(sightTolerance < 0):
+                print("didn't find anything")
+                break
         else:
-            turnRight(0.5)
-            turnLeft(0.5)
             hasFailed = True
 
-    cv.imshow("Foreground", img)
+    cv.imshow("Contours", img)
 
     key = cv.waitKey(1) & 0xFF
     
