@@ -168,6 +168,7 @@ def getCapture():
         # and occupied/unoccupied text
         img = frame.array
         break
+    rawCapture.truncate(0)
     return img
 
 while True:
@@ -190,7 +191,7 @@ while True:
             for i in range(0, numberOfTurns*2):
                 lookRight()
                 #get the camera feed
-                status, img = cap.read()
+                img = getCapture()
                 #cv.imshow('Image',img)
                 #check if there's a face
                 if(hasFace(img)):
@@ -206,7 +207,7 @@ while True:
             #this will get the robot back to the center
             for i in range(0, numberOfTurns):
                 lookLeft()
-                status, img = cap.read()
+                img = getCapture()
                 #cv.imshow('Image',img)
                 if(hasFace(img)):
                     faceNotFound = False
@@ -220,7 +221,7 @@ while True:
     #now time to get into position
     while(faceHasBeenFound):
         #get the capture
-        status, img = cap.read()
+        img = getCapture()
         #get the face
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         faces = face_cascade.detectMultiScale(gray, 1.3, 5)
