@@ -5,8 +5,8 @@ import queue
 import numpy as np
 import cv2 as cv
 
-#import tkinter as tk
-#import maestro
+import tkinter as tk
+import maestro
 import time
 
 face_cascade = cv.CascadeClassifier('data/haarcascades/haarcascade_frontalface_default.xml')
@@ -91,7 +91,7 @@ BODY = 0
 HEADTILT = 4
 HEADTURN = 3
 
-#tango = maestro.Controller()
+tango = maestro.Controller()
 body = 6000
 headTurn = 6000
 headTilt = 6200
@@ -103,7 +103,7 @@ def lookLeft():
     global headTurn
     headTurn += headTurnValue
     print("looking left")
-    #tango.setTarget(HEADTURN, headTurn)
+    tango.setTarget(HEADTURN, headTurn)
     print("stabilizing")
     time.sleep(headTurnWaitValue)
     
@@ -112,7 +112,7 @@ def lookRight():
     global headTurn
     headTurn -= headTurnValue
     print("looking right")
-    #tango.setTarget(HEADTURN, headTurn)
+    tango.setTarget(HEADTURN, headTurn)
     print("stabilizing")
     time.sleep(headTurnWaitValue)
 
@@ -139,10 +139,23 @@ numberOfTurns = 5
 
 timeWithoutFace = 0
 
-#width = 640
-#height = 480
-stat, image = cap.read()
-height, width, channels = image.shape
+# initialize the camera and grab a reference to the raw camera capture
+camera = PiCamera()
+width = 640
+height = 480
+camera.resolution = (width, height)
+camera.framerate = 32
+rawCapture = PiRGBArray(camera, size=(width, height))
+
+def getCapture():
+    # capture frames from the camera
+    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+        # grab the raw NumPy array representing the image, then initialize the timestamp
+        # and occupied/unoccupied text
+        img = frame.array
+        break
+    rawCapture.truncate(0)
+    return img
 
 middleX = (int)(width/2)
 middleY = (int)(height/2)
@@ -161,62 +174,62 @@ turnWaitValue = 0.2
 motorWaitValue = 0.2
 
 #get the head in the right position
-#tango.setTarget(HEADTILT, headTilt)
-#tango.setTarget(HEADTURN, headTurn)
+tango.setTarget(HEADTILT, headTilt)
+tango.setTarget(HEADTURN, headTurn)
 
 def turnRight(waitValue):
     global turn
     turn -= changeValue
-    #tango.setTarget(TURN, turn)
+    tango.setTarget(TURN, turn)
     print('turn right: turn = ' + str(waitValue))
     time.sleep(waitValue)
     turn += changeValue
-    #tango.setTarget(TURN, turn)
+    tango.setTarget(TURN, turn)
     time.sleep(waitValue)
 
 def turnLeft(waitValue):
     global turn
     turn += changeValue
-    #tango.setTarget(TURN, turn)
+    tango.setTarget(TURN, turn)
     print('turn left: turn = ' + str(waitValue))
     time.sleep(waitValue)
     turn -= changeValue
-    #tango.setTarget(TURN, turn)
+    tango.setTarget(TURN, turn)
     time.sleep(waitValue)
 
 def forward(waitValue):
     global motors
     motors += changeValue
-    #tango.setTarget(MOTORS, motors)
+    tango.setTarget(MOTORS, motors)
     print('move forward: motors = ' + str(motors))
     time.sleep(waitValue)
     motors -= changeValue
-    #tango.setTarget(MOTORS, motors)
+    tango.setTarget(MOTORS, motors)
     print('stop ' + str(motors))
     time.sleep(waitValue)
 
 def backward(waitValue):
     global motors
     motors -= changeValue
-    #tango.setTarget(MOTORS, motors)
+    tango.setTarget(MOTORS, motors)
     print('move backward: motors = ' + str(motors))
     time.sleep(waitValue)
     motors += changeValue
-    #tango.setTarget(MOTORS, motors)
+    tango.setTarget(MOTORS, motors)
     print('stop ' + str(motors))
     time.sleep(waitValue)
 
 def changeLookHeight(newPos):
     global headTilt
     headTilt = newPos
-    #tango.setTarget(HEADTILT, headTilt)
+    tango.setTarget(HEADTILT, headTilt)
     print('look up: newPos = ' + str(newPos))
     time.sleep(0.2)
 
 def changeLookDirection(newPos):
     global headTurn
     headTurn = newPos
-    #tango.setTarget(HEADTURN, headTurn)
+    tango.setTarget(HEADTURN, headTurn)
     print('look up: newPos = ' + str(newPos))
     time.sleep(0.2)
 
@@ -278,7 +291,7 @@ while True:
         for i in range(0, numberOfTurns):
             lookLeft()
             #get the camera feed
-            status, img = cap.read()
+            img = getCapture()
             #cv.imshow('Image',img)
             #check if there's a face
             if(hasFace(img)):
@@ -292,7 +305,7 @@ while True:
             for i in range(0, numberOfTurns*2):
                 lookRight()
                 #get the camera feed
-                status, img = cap.read()
+                img = getCapture()
                 #cv.imshow('Image',img)
                 #check if there's a face
                 if(hasFace(img)):
@@ -303,16 +316,17 @@ while True:
                     break
         #if a face hasn't been found by turning left or right
         if(faceNotFound):
-            #sayWhereAreYou()
+            sayWhereAreYou()
             print("Ugh where are you?")
             #this will get the robot back to the center
             for i in range(0, numberOfTurns):
                 lookLeft()
-                status, img = cap.read()
+                img = getCapture()
                 #cv.imshow('Image',img)
                 if(hasFace(img)):
                     faceNotFound = False
                     faceHasBeenFound = True
+                    sayHello()
                     break
                 if cv.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -321,7 +335,7 @@ while True:
     #now time to get into position
     while(faceHasBeenFound):
         #get the capture
-        status, img = cap.read()
+        img = getCapture()
         #get the face
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         faces = face_cascade.detectMultiScale(gray, 1.3, 5)
