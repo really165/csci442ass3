@@ -9,6 +9,9 @@ import tkinter as tk
 import maestro
 import time
 
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+
 face_cascade = cv.CascadeClassifier('data/haarcascades/haarcascade_frontalface_default.xml')
 
 globalVar = ""
@@ -54,16 +57,18 @@ class ClientSocket(threading.Thread):
         print("Goodbye")
         exit()
             
-IP = '10.200.28.12'
+IP = '10.200.47.148'
+PORT = 5010
+client = ClientSocket(IP, PORT)
 
 #greets the human
 def sayHello():
     #IP = '10.200.28.12'
-    PORT = 5010
-    client = ClientSocket(IP, PORT)
+    #PORT = 5010
+    #client = ClientSocket(IP, PORT)
     ##client.start()
 
-    for i in ["hello human", "How are you", "Sorry, you must die now"]:
+    for i in ["hello human"]:
         time.sleep(1)
         client.sendData(i)            
     print("Exiting Sends")
@@ -166,8 +171,8 @@ heightTolerance = 75
 #start in the middle
 posX = middleX
 posY = middleY
-preferredArea = 40000
-areaTolerance = 7000
+preferredArea = 35000
+areaTolerance = 10000
 
 changeValue = 1000
 turnWaitValue = 0.2
@@ -199,22 +204,22 @@ def turnLeft(waitValue):
 
 def forward(waitValue):
     global motors
-    motors += changeValue
+    motors -= changeValue
     tango.setTarget(MOTORS, motors)
     print('move forward: motors = ' + str(motors))
     time.sleep(waitValue)
-    motors -= changeValue
+    motors += changeValue
     tango.setTarget(MOTORS, motors)
     print('stop ' + str(motors))
     time.sleep(waitValue)
 
 def backward(waitValue):
     global motors
-    motors -= changeValue
+    motors += changeValue
     tango.setTarget(MOTORS, motors)
     print('move backward: motors = ' + str(motors))
     time.sleep(waitValue)
-    motors += changeValue
+    motors -= changeValue
     tango.setTarget(MOTORS, motors)
     print('stop ' + str(motors))
     time.sleep(waitValue)
@@ -297,6 +302,7 @@ while True:
             if(hasFace(img)):
                 faceNotFound = False
                 faceHasBeenFound = True
+                sayHello()
                 break
             if cv.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -311,12 +317,13 @@ while True:
                 if(hasFace(img)):
                     faceNotFound = False
                     faceHasBeenFound = True
+                    sayHello()
                     break
                 if cv.waitKey(1) & 0xFF == ord('q'):
                     break
         #if a face hasn't been found by turning left or right
         if(faceNotFound):
-            sayWhereAreYou()
+            #sayWhereAreYou()
             print("Ugh where are you?")
             #this will get the robot back to the center
             for i in range(0, numberOfTurns):
