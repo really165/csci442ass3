@@ -12,6 +12,9 @@ edgeCutoffPercentage = 0.05
 whiteToleranceColor = 200
 maxSegment = 600
 minSegment = 50
+#distance it needs to be from the sides in order to turn
+turnTolerance = 213
+moveTolerance = 120
 
 MOTORS = 1
 TURN = 2
@@ -78,7 +81,6 @@ def findMax(sidefill):
                 leftSegment = x
                 #say we've found a segment
                 foundSegment = True
-                print("this executes")
             #if we've found a segment and have found a white pixel
             elif(foundSegment and sidefill[y][x]==255):
                 #just increment the pixel count
@@ -90,12 +92,28 @@ def findMax(sidefill):
                 #if it is long enough
                 if(rightSegment-leftSegment > preferredSize):
                     middleX = (int)((rightSegment+leftSegment)/2)
-                    print(middleX)
                     middleY = y
                     return middleX, middleY
     return 0,0
 
-#def move
+#move based on the point given
+def move(x, y):
+    global width
+    global height
+    correctedY = height-y
+    #determine if we must turn
+    if(x<turnTolerance):
+        print("turn left")
+    elif(x>(width-1)-turnTolerance):
+        print("turn right")
+    else:
+        print("no turn")
+    #determine if we need to move
+    if(correctedY>moveTolerance):
+        print("must move forward")
+    else:
+        print("stay put")
+
 
 img = cv.imread("demoimage2.png", cv.IMREAD_COLOR)
 height, width, channels = img.shape
@@ -109,6 +127,7 @@ sidefill = processImageWhite(img)
 maxX, maxY = findMax(sidefill)
 cv.circle(img,(maxX,maxY),10,(0,255,0),-1)
 #move based on the point found
+move(maxX, maxY)
 
 cv.imshow("sidefill", sidefill)
 cv.imshow("original", img)
