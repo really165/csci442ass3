@@ -78,6 +78,7 @@ def findMax(sidefill):
                 leftSegment = x
                 #say we've found a segment
                 foundSegment = True
+                print("this executes")
             #if we've found a segment and have found a white pixel
             elif(foundSegment and sidefill[y][x]==255):
                 #just increment the pixel count
@@ -100,7 +101,7 @@ img = cv.imread("demoimage2.png", cv.IMREAD_COLOR)
 height, width, channels = img.shape
 percentOffTheEdges = (int)(width*edgeCutoffPercentage)
 maxX = (int)(width/2)
-maxY = 0
+maxY = height
 
 #get the sidefill of the image
 sidefill = processImageWhite(img)
