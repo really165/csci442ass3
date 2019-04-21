@@ -255,6 +255,8 @@ while(True):
     cv.circle(img,(maxX,maxY),10,(0,255,0),-1)
     #cv.imshow("sidefill", sidefill)
     #cv.imshow("original", img)
+    if cv.waitKey(1) & 0xFF == ord('q'):
+        break
 
 #todo: put pencil in box
 
