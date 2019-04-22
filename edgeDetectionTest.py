@@ -48,21 +48,22 @@ def performSidefill(edges):
     global width
     global height
     global percentOffTheEdges
-    for x in range(width-1,0,-1):
-        if(x > percentOffTheEdges and x < (width-1)-percentOffTheEdges):
-            foundWhite = False
-            for y in range(height-1,0,-1):
-                if(foundWhite):
+    for x in range(0,width-1):
+        foundWhite = False
+        for y in range(height-1,0,-1):
+            if(foundWhite or x < percentOffTheEdges or x > (width-1)-percentOffTheEdges):
+                edges[y][x] = 0
+            elif(edges[y][x] == 255):
+                blue = (int)(img[y][x][0])
+                green = (int)(img[y][x][1])
+                red = (int)(img[y][x][2])
+                if(blue>whiteToleranceColor and green>whiteToleranceColor and red>whiteToleranceColor and isGrayscale(blue, green, red)):
+                    foundWhite = True
                     edges[y][x] = 0
-                elif(not foundWhite and edges[y][x] == 255):
-                    blue = (int)(img[y][x][0])
-                    green = (int)(img[y][x][1])
-                    red = (int)(img[y][x][2])
-                    if(blue>whiteToleranceColor and green>whiteToleranceColor and red>whiteToleranceColor and isGrayscale(blue, green, red)):
-                        foundWhite = True
-                        edges[y][x] = 0
                 else:
                     edges[y][x] = 255
+            else:
+                edges[y][x] = 255
     return edges
 
 #checks if a pixel is grayscale
@@ -91,39 +92,46 @@ def processImageWhite(img):
 def findMax(sidefill):
     global width
     global height
-    foundSegment = False
-
     #start from the top
     #find the first acceptable segment
     for y in range(0,height-1):
         correctedY = maxY-y
-        preferredSize = (maxSegment-minSegment)*((correctedY)/(height))+minSegment
+        preferredSize = (int)((minSegment-maxSegment)*((correctedY)/(height))+maxSegment)
         whitesFound = 0
         leftSegment = 0
         rightSegment = 0
+        segmentStarted = False
+        #print(correctedY)
+        #print(preferredSize)
         for x in range(0,width-1):
-            #if we haven't found a segment and have found a white pixel
-            if(not foundSegment and sidefill[y][x]==255):
-                #increment pixel count
-                whitesFound += 1
-                #set the left point of the segment
-                leftSegment = x
-                #say we've found a segment
-                foundSegment = True
-            #if we've found a segment and have found a white pixel
-            elif(foundSegment and sidefill[y][x]==255):
-                #just increment the pixel count
-                whitesFound += 1
-            #if we've found a segment and have found a black pixel
-            elif(foundSegment and sidefill[y][x] == 0):
-                #determine if the segment is long enough
-                rightSegment = x-1
-                #if it is long enough
-                if(rightSegment-leftSegment > preferredSize):
-                    middleX = (int)((rightSegment+leftSegment)/2)
-                    middleY = y
-                    return middleX, middleY
-    return 0,0
+            #if we haven't found a segment yet
+            if(not segmentStarted):
+                #if the pixel is white
+                if(sidefill[y][x]==255):
+                    #set left
+                    leftSegment = x
+                    #increment white count
+                    whitesFound += 1
+                    segmentStarted = True
+            #if a segment was started
+            else:
+                #if the pixel is white
+                if(sidefill[y][x]==255):
+                    #increment white count
+                    whitesFound += 1
+                #if the pixel is black
+                else:
+                    #determine if the segment is long enough
+                    rightSegment = x-1
+                    #if it is long enough
+                    if(rightSegment-leftSegment > preferredSize):
+                        middleX = (int)((rightSegment+leftSegment)/2)
+                        middleY = y
+                        return middleX, middleY
+                    else:
+                        segmentStarted = False
+                        whitesFound = 0
+    return (width/2),height
 
 #move based on the point given
 def canMove(x, y):
