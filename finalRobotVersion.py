@@ -243,22 +243,16 @@ def getCapture():
 
 #initial capture
 #img = cv.imread("demoimage3.png", cv.IMREAD_COLOR)
+camera = PiCamera()
+width = 640
+height = 480
+camera.resolution = (width, height)
+camera.framerate = 32
+rawCapture = PiRGBArray(camera, size=(width, height))
 img = getCapture()
-height, width, channels = img.shape
 percentOffTheEdges = (int)(width*edgeCutoffPercentage)
 maxX = (int)(width/2)
 maxY = height
-
-#get the sidefill of the image
-#sidefill = processImageWhite()
-#find the highest point that can be moved to
-#maxX, maxY = findMax(sidefill)
-#cv.circle(img,(maxX,maxY),10,(0,255,0),-1)
-#move based on the point found
-#move(maxX, maxY)
-#turnUntilBlue()
-#cv.imshow("sidefill", sidefill)
-#cv.imshow("original", img)
 
 #orientate the robot until the blue and orange pixels are somewhat centered
 while(not coloredIsCentered()):
