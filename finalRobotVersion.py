@@ -13,11 +13,12 @@ from picamera.array import PiRGBArray
 from picamera import PiCamera
 
 blurIterations = 3
-cannyThreshold1 = 300
-cannyThreshold2 = 700
+cannyThreshold1 = 150
+cannyThreshold2 = 400
 erosionIterations = 5
 edgeCutoffPercentage = 0.05
-whiteToleranceColor = 200
+whiteToleranceColor = 180
+grayscaleToleranceValue = 10
 maxSegment = 600
 minSegment = 50
 #distance it needs to be from the sides in order to turn
@@ -54,23 +55,37 @@ def performSidefill(edges):
                 if(foundWhite):
                     edges[y][x] = 0
                 elif(not foundWhite and edges[y][x] == 255):
-                    if(img[y][x][0]>whiteToleranceColor and img[y][x][1]>whiteToleranceColor and img[y][x][2]>whiteToleranceColor):
+                    blue = (int)(img[y][x][0])
+                    green = (int)(img[y][x][1])
+                    red = (int)(img[y][x][2])
+                    if(blue>whiteToleranceColor and green>whiteToleranceColor and red>whiteToleranceColor and isGrayscale(blue, green, red)):
                         foundWhite = True
                         edges[y][x] = 0
                 else:
                     edges[y][x] = 255
     return edges
 
+#checks if a pixel is grayscale
+def isGrayscale(b, g, r):
+    #values need to be no more than 10 away from each other
+    diffBG = abs(b-g)
+    diffGR = abs(g-r)
+    diffBR = abs(b-r)
+    if(diffBG<grayscaleToleranceValue and diffBR<grayscaleToleranceValue and diffGR<grayscaleToleranceValue):
+        return True
+    else:
+        return False
+
 #process image and only pay attention to the white pixels
-def processImageWhite():
-    global img
+def processImageWhite(img):
+    #global img
     blur = cv.medianBlur(img,blurIterations)
     edges = cv.Canny(blur,cannyThreshold1,cannyThreshold2)
     kernel = np.ones((5,5),np.uint8)
-    dilation = cv.dilate(edges,kernel,iterations = 1)
+    dilation = cv.dilate(edges,kernel,iterations = 2)
+    cv.imshow("dilation", dilation)
     sidefill = performSidefill(dilation)
     erosion = cv.erode(sidefill,kernel,iterations = 4)
-    cv.imshow("output", erosion)
     return erosion
 
 def findMax(sidefill):
@@ -108,7 +123,7 @@ def findMax(sidefill):
                     middleX = (int)((rightSegment+leftSegment)/2)
                     middleY = y
                     return middleX, middleY
-    return -1,-1
+    return 0,0
 
 #move based on the point given
 def canMove(x, y):
@@ -209,7 +224,10 @@ def coloredPixelsAveragePosition(edges):
     for x in range(0,width-1):
         if(x > percentOffTheEdges and x < (width-1)-percentOffTheEdges):
             for y in range(height-1,0,-1):
-                if(edges[y][x]==255 and isColored(img[y][x][0], img[y][x][1], img[y][x][2])):
+                blue = (int)(img[y][x][0])
+                green = (int)(img[y][x][1])
+                red = (int)(img[y][x][2])
+                if(edges[y][x]==255 and (not isGrayscale(blue,green,red))):
                     xTotal += x
                     yTotal += y
                     numberOfPoints += 1
