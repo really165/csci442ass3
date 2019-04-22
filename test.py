@@ -81,7 +81,12 @@ def calculateTurnValue(center, xPos):
 
 def calculateForwardValue(height, yPos):
     normalized = 1-(yPos/height)
-    return normalized
+    if (normalized < 1):
+        return 0.2
+    elif (normalized > 0.5):
+    	return 0.5
+    else:
+        return normalized
 
 # initialize the camera and grab a reference to the raw camera capture
 camera = PiCamera()
@@ -110,7 +115,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     gray = cv.cvtColor(img, cv.COLOR_RGB2GRAY)
 
     #step two: threshold
-    ret,threshold = cv.threshold(gray,230,255,cv.THRESH_BINARY)
+    ret,threshold = cv.threshold(gray,200,255,cv.THRESH_BINARY)
     contours, hierarchy = cv.findContours(threshold,cv.RETR_TREE,cv.CHAIN_APPROX_SIMPLE)
 
     numberOfContours = 0
