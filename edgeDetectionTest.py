@@ -242,8 +242,13 @@ def getCapture():
 
 #initial capture
 #img = cv.imread("demoimage3.png", cv.IMREAD_COLOR)
+camera = PiCamera()
+width = 640
+height = 480
+camera.resolution = (width, height)
+camera.framerate = 32
+rawCapture = PiRGBArray(camera, size=(width, height))
 img = getCapture()
-height, width, channels = img.shape
 percentOffTheEdges = (int)(width*edgeCutoffPercentage)
 maxX = (int)(width/2)
 maxY = height
