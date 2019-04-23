@@ -20,13 +20,15 @@ edgeCutoffPercentage = 0.05
 whiteToleranceColor = 180
 grayscaleToleranceValue = 10
 #distance it needs to be from the sides in order to turn
-turnTolerance = 120
-moveTolerance = 120
+#turnTolerance = 120
+#moveTolerance = 120
 #how much the robot turns or moves when it needs to
-changeValue = 1000
-waitValue = 0.2
+changeValue = 1100
+waitValue = 0.4
 #color tolerance used when looking for orange and blue pixels
 colorTolerance = 10
+#how long the robot takes to turn around
+turnAroundTime = 1
 
 MOTORS = 1
 TURN = 2
@@ -49,7 +51,7 @@ def performSidefill(edges):
     for x in range(0,width-1):
         foundWhite = False
         for y in range(height-1,0,-1):
-            if(foundWhite or x < percentOffTheEdges or x > (width-1)-percentOffTheEdges):
+            if(foundWhite or x < percentOffTheEdges or x > (width-1)-percentOffTheEdges or y < topCutoff):
                 edges[y][x] = 0
             elif(edges[y][x] == 255):
                 blue = (int)(img[y][x][0])
@@ -92,7 +94,7 @@ def findMax(sidefill):
     global height
     #start from the top
     #find the first acceptable segment
-    for y in range(0,height-1):
+    for y in range(topCutoff,height-1):
         correctedY = maxY-y
         preferredSize = (int)((minSegment-maxSegment)*((correctedY)/(height))+maxSegment)
         whitesFound = 0
@@ -180,12 +182,22 @@ def turnLeft(waitValue):
 
 def forward(waitValue):
     motors = 6000
-    motors += changeValue
+    motors -= changeValue
     tango.setTarget(MOTORS, motors)
     print('moving forward')
     time.sleep(waitValue)
-    motors -= changeValue
+    motors += changeValue
     tango.setTarget(MOTORS, motors)
+    time.sleep(waitValue)
+
+def turnAround():
+    turn = 6000
+    turn += changeValue
+    tango.setTarget(TURN, turn)
+    print('turning around')
+    time.sleep(turnAroundTime)
+    turn -= changeValue
+    tango.setTarget(TURN, turn)
     time.sleep(waitValue)
 
 #turn until the colored pixels are centered
@@ -268,10 +280,13 @@ def getCapture():
 #initial capture
 #img = cv.imread("demoimage3.png", cv.IMREAD_COLOR)
 camera = PiCamera()
-width = 480
-height = 360
+width = 352
+height = 240
+turnTolerance = (int)(width/4)
+moveTolerance = (int)(height/4)
 maxSegment = width - (int)(width*0.9)
-minSegment = (int)(width*0.2)
+minSegment = (int)(width*0.3)
+topCutoff = (int)(height/4)
 camera.resolution = (width, height)
 camera.framerate = 32
 rawCapture = PiRGBArray(camera, size=(width, height))
@@ -300,6 +315,7 @@ while(maxX > -1 and canMove(maxX, maxY)):
 
 #todo: grab pencil
 
+turnAround()
 #turn around
 while(not coloredIsCentered()):
     #update the capture
