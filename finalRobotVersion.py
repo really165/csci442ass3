@@ -19,8 +19,6 @@ erosionIterations = 5
 edgeCutoffPercentage = 0.05
 whiteToleranceColor = 180
 grayscaleToleranceValue = 10
-maxSegment = 600
-minSegment = 50
 #distance it needs to be from the sides in order to turn
 turnTolerance = 120
 moveTolerance = 120
@@ -78,8 +76,8 @@ def isGrayscale(b, g, r):
         return False
 
 #process image and only pay attention to the white pixels
-def processImageWhite(img):
-    #global img
+def processImageWhite():
+    global img
     blur = cv.medianBlur(img,blurIterations)
     edges = cv.Canny(blur,cannyThreshold1,cannyThreshold2)
     kernel = np.ones((5,5),np.uint8)
@@ -270,8 +268,10 @@ def getCapture():
 #initial capture
 #img = cv.imread("demoimage3.png", cv.IMREAD_COLOR)
 camera = PiCamera()
-width = 640
-height = 480
+width = 480
+height = 360
+maxSegment = width - (int)(width*0.9)
+minSegment = (int)(width*0.2)
 camera.resolution = (width, height)
 camera.framerate = 32
 rawCapture = PiRGBArray(camera, size=(width, height))
