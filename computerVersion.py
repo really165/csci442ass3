@@ -18,7 +18,13 @@ moveTolerance = 120
 changeValue = 1000
 waitValue = 0.2
 #color tolerance used when looking for orange and blue pixels
-colorTolerance = 10
+pinkR = 245
+pinkG = 187
+pinkB = 212
+yellowR = 221
+yellowG = 194
+yellowB = 107
+colorTolerance = 25
 
 MOTORS = 1
 TURN = 2
@@ -41,7 +47,7 @@ def performSidefill(edges):
     for x in range(0,width-1):
         foundWhite = False
         for y in range(height-1,0,-1):
-            if(foundWhite or x < percentOffTheEdges or x > (width-1)-percentOffTheEdges):
+            if(foundWhite or x < percentOffTheEdges or x > (width-1)-percentOffTheEdges or y < topCutoff):
                 edges[y][x] = 0
             elif(edges[y][x] == 255):
                 blue = (int)(img[y][x][0])
@@ -68,8 +74,8 @@ def isGrayscale(b, g, r):
         return False
 
 #process image and only pay attention to the white pixels
-def processImageWhite(img):
-    #global img
+def processImageWhite():
+    global img
     blur = cv.medianBlur(img,blurIterations)
     edges = cv.Canny(blur,cannyThreshold1,cannyThreshold2)
     kernel = np.ones((5,5),np.uint8)
@@ -84,10 +90,9 @@ def findMax(sidefill):
     global height
     #start from the top
     #find the first acceptable segment
-    for y in range(0,height-1):
+    for y in range(topCutoff,height-1):
         correctedY = maxY-y
         preferredSize = (int)((minSegment-maxSegment)*((correctedY)/(height))+maxSegment)
-        print("prefferred size: " + (str)(preferredSize) + " y pos: " + (str)(y)) 
         whitesFound = 0
         leftSegment = 0
         rightSegment = 0
@@ -120,31 +125,36 @@ def findMax(sidefill):
                         middleY = y
                         return middleX, middleY
                     else:
-                        print("actual size: " + (str)(rightSegment-leftSegment))
                         segmentStarted = False
                         whitesFound = 0
-    return (int)(width/2),height
+    return (width/2),height
 
 #move based on the point given
-def move(x, y):
+def canMove(x, y):
     global width
     global height
     correctedY = height-y
+
+    #determine if we need to move
+    if(correctedY<moveTolerance):
+        print("stay put")
+        return False
+
     #determine if we must turn
     if(x<turnTolerance):
         print("turn left")
         turnLeft(waitValue)
+        forward(waitValue)
+        return True
     elif(x>(width-1)-turnTolerance):
         print("turn right")
         turnRight(waitValue)
+        forward(waitValue)
+        return True
     else:
         print("no turn")
-    #determine if we need to move
-    if(correctedY>moveTolerance):
-        print("must move forward")
         forward(waitValue)
-    else:
-        print("stay put")
+        return True
 
 def turnRight(waitValue):
     turn = 6000
@@ -176,22 +186,18 @@ def forward(waitValue):
     #tango.setTarget(MOTORS, motors)
     time.sleep(waitValue)
 
-#turn until the blue bar is centered
-def turnUntilBlue():
+#turn until the colored pixels are centered
+def coloredIsCentered():
     global img
     #process the image
     blur = cv.medianBlur(img,blurIterations)
     edges = cv.Canny(blur,cannyThreshold1,cannyThreshold2)
     kernel = np.ones((5,5),np.uint8)
     dilation = cv.dilate(edges,kernel,iterations = 3)
+    #cv.imshow("output", dilation)
     averageX, averageY = coloredPixelsAveragePosition(dilation)
     if(averageX == -1 and averageY == -1):
         print("no colored pixels found")
-        turnRight(waitValue)
-        return False
-    elif((height-averageY)>(int)(height/2)):
-        print("invalid average found")
-        cv.circle(img,(averageX,averageY),10,(255,0,0),-1)
         turnRight(waitValue)
         return False
     else:
@@ -215,16 +221,15 @@ def coloredPixelsAveragePosition(edges):
     xTotal = 0
     yTotal = 0
     numberOfPoints = 0
-    for x in range(0,width-1):
-        if(x > percentOffTheEdges and x < (width-1)-percentOffTheEdges):
-            for y in range(height-1,0,-1):
-                blue = (int)(img[y][x][0])
-                green = (int)(img[y][x][1])
-                red = (int)(img[y][x][2])
-                if(edges[y][x]==255 and (not isGrayscale(blue,green,red))):
-                    xTotal += x
-                    yTotal += y
-                    numberOfPoints += 1
+    for x in range(percentOffTheEdges,(width-1)-percentOffTheEdges):
+        for y in range(((height-1)-colorCutoff),(height-1)):
+            blue = (int)(img[y][x][0])
+            green = (int)(img[y][x][1])
+            red = (int)(img[y][x][2])
+            if(edges[y][x]==255 and isColored(blue, green, red)):
+                xTotal += x
+                yTotal += y
+                numberOfPoints += 1
     if(numberOfPoints>0):
         xAverage = (int)(xTotal/numberOfPoints)
         yAverage = (int)(yTotal/numberOfPoints)
@@ -236,31 +241,35 @@ def coloredPixelsAveragePosition(edges):
 #checks if the pixel is blue or orange
 def isColored(blue, green, red):
     #check blue first
-    if(185-colorTolerance < red < 185+colorTolerance and 203-colorTolerance < green < 203+colorTolerance and 205-colorTolerance < blue < 205+colorTolerance):
+    if(pinkR-colorTolerance < red < pinkR+colorTolerance and pinkG-colorTolerance < green < pinkG+colorTolerance and pinkB-colorTolerance < blue < pinkB+colorTolerance):
         return True
-    elif(218-colorTolerance < red < 218+colorTolerance and 181-colorTolerance < green < 181+colorTolerance and 72-colorTolerance < blue < 72+colorTolerance):
+    elif(yellowR-colorTolerance < red < yellowR+colorTolerance and yellowG-colorTolerance < green < yellowG+colorTolerance and yellowB-colorTolerance < blue < yellowB+colorTolerance):
         return True
     else:
         return False
 
-img = cv.imread("demoimage4.png", cv.IMREAD_COLOR)
+img = cv.imread("demoimage6.png", cv.IMREAD_COLOR)
 height, width, channels = img.shape
+turnTolerance = (int)(width*0.3)
+moveTolerance = (int)(height*0.1)
 maxSegment = width - (int)(width*0.9)
-minSegment = (int)(width*0.2)
+minSegment = (int)(width*0.3)
+topCutoff = (int)(height*0.1)
+colorCutoff = (int)(height*0.3)
 percentOffTheEdges = (int)(width*edgeCutoffPercentage)
 maxX = (int)(width/2)
 maxY = height
 
 #get the sidefill of the image
-sidefill = processImageWhite(img)
+sidefill = processImageWhite()
 #find the highest point that can be moved to
 maxX, maxY = findMax(sidefill)
 cv.circle(img,(maxX,maxY),10,(0,255,0),-1)
 #move based on the point found
-move(maxX, maxY)
-turnUntilBlue()
+canMove(maxX, maxY)
+coloredIsCentered()
 
-#cv.imshow("sidefill", sidefill)
+cv.imshow("sidefill", sidefill)
 cv.imshow("original", img)
 
 cv.waitKey(0)
