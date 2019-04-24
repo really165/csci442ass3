@@ -34,7 +34,8 @@ yellowG = 194
 yellowB = 107
 colorTolerance = 25
 #how long the robot takes to turn around
-turnAroundTime = 1
+turnAroundTime = 1.6
+turnTime = 0.3
 
 MOTORS = 1
 TURN = 2
@@ -171,20 +172,20 @@ def turnRight(waitValue):
     turn -= changeValue
     tango.setTarget(TURN, turn)
     print('turning right')
-    time.sleep(waitValue)
+    time.sleep(turnTime)
     turn += changeValue
     tango.setTarget(TURN, turn)
-    time.sleep(waitValue)
+    time.sleep(turnTime)
 
 def turnLeft(waitValue):
     turn = 6000
     turn += changeValue
     tango.setTarget(TURN, turn)
     print('turning left')
-    time.sleep(waitValue)
+    time.sleep(turnTime)
     turn -= changeValue
     tango.setTarget(TURN, turn)
-    time.sleep(waitValue)
+    time.sleep(turnTime)
 
 def forward(waitValue):
     motors = 6000
