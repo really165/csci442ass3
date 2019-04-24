@@ -20,13 +20,19 @@ edgeCutoffPercentage = 0.05
 whiteToleranceColor = 180
 grayscaleToleranceValue = 10
 #distance it needs to be from the sides in order to turn
-#turnTolerance = 120
-#moveTolerance = 120
+turnTolerance = 120
+moveTolerance = 120
 #how much the robot turns or moves when it needs to
-changeValue = 1100
-waitValue = 0.4
+changeValue = 1000
+waitValue = 0.2
 #color tolerance used when looking for orange and blue pixels
-colorTolerance = 10
+pinkR = 245
+pinkG = 187
+pinkB = 212
+yellowR = 221
+yellowG = 194
+yellowB = 107
+colorTolerance = 25
 #how long the robot takes to turn around
 turnAroundTime = 1
 
@@ -198,13 +204,10 @@ def coloredIsCentered():
     edges = cv.Canny(blur,cannyThreshold1,cannyThreshold2)
     kernel = np.ones((5,5),np.uint8)
     dilation = cv.dilate(edges,kernel,iterations = 3)
+    #cv.imshow("output", dilation)
     averageX, averageY = coloredPixelsAveragePosition(dilation)
     if(averageX == -1 and averageY == -1):
         print("no colored pixels found")
-        turnRight(waitValue)
-        return False
-    elif((height-averageY)>(int)(height/2)):
-        print("invalid average found")
         turnRight(waitValue)
         return False
     else:
@@ -228,16 +231,15 @@ def coloredPixelsAveragePosition(edges):
     xTotal = 0
     yTotal = 0
     numberOfPoints = 0
-    for x in range(0,width-1):
-        if(x > percentOffTheEdges and x < (width-1)-percentOffTheEdges):
-            for y in range(height-1,0,-1):
-                blue = (int)(img[y][x][0])
-                green = (int)(img[y][x][1])
-                red = (int)(img[y][x][2])
-                if(edges[y][x]==255 and (not isGrayscale(blue,green,red))):
-                    xTotal += x
-                    yTotal += y
-                    numberOfPoints += 1
+    for x in range(percentOffTheEdges,(width-1)-percentOffTheEdges):
+        for y in range(((height-1)-colorCutoff),(height-1)):
+            blue = (int)(img[y][x][0])
+            green = (int)(img[y][x][1])
+            red = (int)(img[y][x][2])
+            if(edges[y][x]==255 and isColored(blue, green, red)):
+                xTotal += x
+                yTotal += y
+                numberOfPoints += 1
     if(numberOfPoints>0):
         xAverage = (int)(xTotal/numberOfPoints)
         yAverage = (int)(yTotal/numberOfPoints)
@@ -249,9 +251,9 @@ def coloredPixelsAveragePosition(edges):
 #checks if the pixel is blue or orange
 def isColored(blue, green, red):
     #check blue first
-    if(185-colorTolerance < red < 185+colorTolerance and 203-colorTolerance < green < 203+colorTolerance and 205-colorTolerance < blue < 205+colorTolerance):
+    if(pinkR-colorTolerance < red < pinkR+colorTolerance and pinkG-colorTolerance < green < pinkG+colorTolerance and pinkB-colorTolerance < blue < pinkB+colorTolerance):
         return True
-    elif(218-colorTolerance < red < 218+colorTolerance and 181-colorTolerance < green < 181+colorTolerance and 72-colorTolerance < blue < 72+colorTolerance):
+    elif(yellowR-colorTolerance < red < yellowR+colorTolerance and yellowG-colorTolerance < green < yellowG+colorTolerance and yellowB-colorTolerance < blue < yellowB+colorTolerance):
         return True
     else:
         return False
@@ -269,18 +271,19 @@ def getCapture():
 camera = PiCamera()
 width = 352
 height = 240
-turnTolerance = (int)(width/4)
-moveTolerance = (int)(height/4)
+turnTolerance = (int)(width*0.3)
+moveTolerance = (int)(height*0.1)
 maxSegment = width - (int)(width*0.9)
 minSegment = (int)(width*0.3)
-topCutoff = (int)(height/4)
+topCutoff = (int)(height*0.1)
+colorCutoff = (int)(height*0.3)
+percentOffTheEdges = (int)(width*edgeCutoffPercentage)
+maxX = (int)(width/2)
+maxY = height
 camera.resolution = (width, height)
 camera.framerate = 32
 rawCapture = PiRGBArray(camera, size=(width, height))
 img = getCapture()
-percentOffTheEdges = (int)(width*edgeCutoffPercentage)
-maxX = (int)(width/2)
-maxY = height
 
 while(True):
     img = getCapture()
