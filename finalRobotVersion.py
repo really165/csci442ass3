@@ -12,13 +12,15 @@ import time
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 
+IP = '10.200.47.148'
+
 blurIterations = 3
 cannyThreshold1 = 150
 cannyThreshold2 = 400
 erosionIterations = 5
 edgeCutoffPercentage = 0.05
-whiteToleranceColor = 180
-grayscaleToleranceValue = 10
+whiteToleranceColor = 215
+grayscaleToleranceValue = 7
 #distance it needs to be from the sides in order to turn
 turnTolerance = 120
 moveTolerance = 120
@@ -34,21 +36,146 @@ yellowG = 194
 yellowB = 107
 colorTolerance = 25
 #how long the robot takes to turn around
-turnAroundTime = 1.6
-turnTime = 0.3
+turnAroundTime = 2.6
+
+globalVar = ""
+
+class ClientSocket(threading.Thread):
+    def __init__(self, IP, PORT):
+        super(ClientSocket, self).__init__()
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.connect((IP, PORT))
+  
+        print ('connected')
+        self.alive = threading.Event()
+        self.alive.set()
+
+    def recieveData(self):
+        global globalVar
+        try:
+            data = self.s.recv(105)
+            print (data)
+            globalVar = data
+        except IOError as e:
+            if e.errno == errno.EWOULDBLOCK:
+                pass
+
+    def sendData(self, sendingString):
+        print ('sending')
+        sendingString += "\n"
+        self.s.send(sendingString.encode('UTF-8'))
+        print ('done sending')
+
+    def run(self):
+        global globalVar
+        while self.alive.isSet():
+            data = self.s.recv(105)
+            print (data)
+            globalVar = data
+            if(data == "0"):
+                self.killSocket()           
+            
+    def killSocket(self):
+        self.alive.clear()
+        self.s.close()
+        print("Goodbye")
+        exit()
+
+PORT = 5010
+client = ClientSocket(IP, PORT)
+
+#greets the human
+def sayGivePen():
+    for i in ["give pen human"]:
+        time.sleep(1)
+        client.sendData(i)            
+    print("Exiting Sends")
+
+#greets the human
+def sayThanks():
+    for i in ["thank you"]:
+        time.sleep(1)
+        client.sendData(i)            
+    print("Exiting Sends")
 
 MOTORS = 1
 TURN = 2
 BODY = 0
 HEADTILT = 4
 HEADTURN = 3
+SHOULDER = 7
+HAND = 8
 
 tango = maestro.Controller()
 body = 6000
 headTurn = 6000
-headTilt = 6200
+headTilt = 4000
 motors = 6000
 turn = 6000
+shoulder = 6000
+hand = 6000
+
+#move parts into the right positions
+def setDefaults():
+    #center head
+    global headTurn
+    headTurn = 6000
+    tango.setTarget(HEADTURN, headTurn)
+    #tilt head down
+    global headTilt
+    headTilt = 4000
+    tango.setTarget(HEADTILT, headTilt)
+    #close hand
+    global hand
+    hand = 7000
+    tango.setTarget(HAND, hand)
+    #move arm down
+    global shoulder
+    shoulder = 6000
+    tango.setTarget(SHOULDER, shoulder)
+
+def grabPen():
+    #look up
+    global headTilt
+    headTilt = 6100
+    tango.setTarget(HEADTILT, headTilt)
+    #open hand
+    global hand
+    hand = 6000
+    tango.setTarget(HAND, hand)
+    #move arm up
+    global shoulder
+    shoulder = 8000
+    tango.setTarget(SHOULDER, shoulder)
+    #ask for pen
+    sayGivePen()
+    #wait two seconds
+    time.sleep(3)
+    sayThanks()
+    #close hand
+    hand = 7000
+    tango.setTarget(HAND, hand)
+    #go back to defaults
+    setDefaults()
+
+#drop the pen
+def dropPen():
+    #raise arm
+    global shoulder
+    shoulder = 8000
+    tango.setTarget(SHOULDER, shoulder)
+    #open hand
+    global hand
+    hand = 6000
+    tango.setTarget(HAND, hand)
+    #wait one second
+    time.sleep(1)
+    #lower arm
+    shoulder = 6000
+    tango.setTarget(SHOULDER, shoulder)
+    #close hand
+    hand = 7000
+    tango.setTarget(HAND, hand)
 
 def performSidefill(edges):
     global img
@@ -172,20 +299,20 @@ def turnRight(waitValue):
     turn -= changeValue
     tango.setTarget(TURN, turn)
     print('turning right')
-    time.sleep(turnTime)
+    time.sleep(waitValue)
     turn += changeValue
     tango.setTarget(TURN, turn)
-    time.sleep(turnTime)
+    time.sleep(waitValue)
 
 def turnLeft(waitValue):
     turn = 6000
     turn += changeValue
     tango.setTarget(TURN, turn)
     print('turning left')
-    time.sleep(turnTime)
+    time.sleep(waitValue)
     turn -= changeValue
     tango.setTarget(TURN, turn)
-    time.sleep(turnTime)
+    time.sleep(waitValue)
 
 def forward(waitValue):
     motors = 6000
@@ -199,11 +326,11 @@ def forward(waitValue):
 
 def turnAround():
     turn = 6000
-    turn += changeValue
+    turn -= changeValue
     tango.setTarget(TURN, turn)
     print('turning around')
     time.sleep(turnAroundTime)
-    turn -= changeValue
+    turn += changeValue
     tango.setTarget(TURN, turn)
     time.sleep(waitValue)
 
@@ -279,6 +406,9 @@ def getCapture():
     rawCapture.truncate(0)
     return img
 
+#get limbs into position
+setDefaults()
+
 #initial capture
 #img = cv.imread("demoimage3.png", cv.IMREAD_COLOR)
 camera = PiCamera()
@@ -315,10 +445,12 @@ while(canMove(maxX, maxY)):
     if cv.waitKey(1) & 0xFF == ord('q'):
         break
 
-#todo: grab pencil
+#get the pen
+grabPen()
 
-turnAround()
 #turn around
+turnAround()
+
 while(not coloredIsCentered()):
     #update the capture
     img = getCapture()
@@ -335,7 +467,8 @@ while(canMove(maxX, maxY)):
     if cv.waitKey(1) & 0xFF == ord('q'):
         break
 
-#todo: put pencil in box
+#drop pencil
+dropPen()
 
 cv.waitKey(0)
 cv.destroyAllWindows()
